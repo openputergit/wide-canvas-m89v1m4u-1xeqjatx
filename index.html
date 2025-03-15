@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Batch Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        .primary-bg { background-color: #002aff; }
+        .secondary-bg { background-color: #eeff00; }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .active-tab {
+            background-color: #002aff;
+            color: white;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <nav class="primary-bg p-4 text-white">
+        <div class="container mx-auto">
+            <h1 class="text-2xl font-bold">Student Batch Management System</h1>
+        </div>
+    </nav>
+
+    <div class="container mx-auto p-4">
+        <div class="mb-4">
+            <div class="flex space-x-2">
+                <button onclick="showTab('batch')" class="px-4 py-2 rounded active-tab" id="batchTab">Batch Management</button>
+                <button onclick="showTab('attendance')" class="px-4 py-2 rounded" id="attendanceTab">Attendance</button>
+            </div>
+        </div>
+
+        <!-- Batch Management Section -->
+        <div id="batchSection" class="bg-white rounded-lg shadow p-6">
+            <div class="flex justify-between mb-4">
+                <h2 class="text-xl font-bold">Batch Details</h2>
+                <button onclick="openAddModal()" class="primary-bg text-white px-4 py-2 rounded">Add Student</button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="bg-gray-100">
+                            <th class="p-2 text-left">Student ID</th>
+                            <th class="p-2 text-left">Name</th>
+                            <th class="p-2 text-left">Batch</th>
+                            <th class="p-2 text-left">Current Topic</th>
+                            <th class="p-2 text-left">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="studentTable"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Attendance Section -->
+        <div id="attendanceSection" class="bg-white rounded-lg shadow p-6 hidden">
+            <h2 class="text-xl font-bold mb-4">Mark Attendance</h2>
+            <div class="mb-4">
+                <input type="date" id="attendanceDate" class="border p-2 rounded" required>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="bg-gray-100">
+                            <th class="p-2 text-left">Student ID</th>
+                            <th class="p-2 text-left">Name</th>
+                            <th class="p-2 text-left">Present</th>
+                        </tr>
+                    </thead>
+                    <tbody id="attendanceTable"></tbody>
+                </table>
+            </div>
+            <button onclick="saveAttendance()" class="primary-bg text-white px-4 py-2 rounded mt-4">Save Attendance</button>
+        </div>
+    </div>
+
+    <!-- Add/Edit Student Modal -->
+    <div id="studentModal" class="modal">
+        <div class="bg-white p-6 rounded-lg w-96 mx-auto mt-20">
+            <h2 id="modalTitle" class="text-xl font-bold mb-4">Add Student</h2>
+            <form id="studentForm" onsubmit="saveStudent(event)">
+                <input type="hidden" id="studentId">
+                <div class="mb-4">
+                    <label class="block mb-2">Name</label>
+                    <input type="text" id="studentName" class="w-full border p-2 rounded" required>
+                </div>
+                <div class="mb-4">
+                    <label class="block mb-2">Batch</label>
+                    <input type="text" id="batch" class="w-full border p-2 rounded" required>
+                </div>
+                <div class="mb-4">
+                    <label class="block mb-2">Current Topic</label>
+                    <input type="text" id="currentTopic" class="w-full border p-2 rounded" required>
+                </div>
+                <div class="flex justify-end space-x-2">
+                    <button type="button" onclick="closeModal()" class="bg-gray-300 px-4 py-2 rounded">Cancel</button>
+                    <button type="submit" class="primary-bg text-white px-4 py-2 rounded">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let students = [];
+        let attendance = {};
+
+        function showTab(tab) {
+            document.getElementById('batchSection').classList.toggle('hidden', tab !== 'batch');
+            document.getElementById('attendanceSection').classList.toggle('hidden', tab !== 'attendance');
+            document.getElementById('batchTab').classList.toggle('active-tab', tab === 'batch');
+            document.getElementById('attendanceTab').classList.toggle('active-tab', tab === 'attendance');
+            if (tab === 'attendance') {
+                renderAttendanceTable();
+            }
+        }
+
+        function openAddModal() {
+            document.getElementById('modalTitle').textContent = 'Add Student';
+            document.getElementById('studentForm').reset();
+            document.getElementById('studentId').value = '';
+            document.getElementById('studentModal').style.display = 'block';
+        }
+
+        function openEditModal(index) {
+            const student = students[index];
+            document.getElementById('modalTitle').textContent = 'Edit Student';
+            document.getElementById('studentId').value = index;
+            document.getElementById('studentName').value = student.name;
+            document.getElementById('batch').value = student.batch;
+            document.getElementById('currentTopic').value = student.currentTopic;
+            document.getElementById('studentModal').style.display = 'block';
+        }
+
+        function closeModal() {
+            document.getElementById('studentModal').style.display = 'none';
+        }
+
+        function saveStudent(event) {
+            event.preventDefault();
+            const studentId = document.getElementById('studentId').value;
+            const student = {
+                name: document.getElementById('studentName').value,
+                batch: document.getElementById('batch').value,
+                currentTopic: document.getElementById('currentTopic').value
+            };
+
+            if (studentId === '') {
+                students.push(student);
+            } else {
+                students[parseInt(studentId)] = student;
+            }
+
+            closeModal();
+            renderStudentTable();
+        }
+
+        function deleteStudent(index) {
+            if (confirm('Are you sure you want to delete this student?')) {
+                students.splice(index, 1);
+                renderStudentTable();
+            }
+        }
+
+        function renderStudentTable() {
+            const tbody = document.getElementById('studentTable');
+            tbody.innerHTML = '';
+            students.forEach((student, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="p-2">${index + 1000}</td>
+                    <td class="p-2">${student.name}</td>
+                    <td class="p-2">${student.batch}</td>
+                    <td class="p-2">${student.currentTopic}</td>
+                    <td class="p-2">
+                        <button onclick="openEditModal(${index})" class="text-blue-500"><i class="bi bi-pencil"></i></button>
+                        <button onclick="deleteStudent(${index})" class="text-red-500 ml-2"><i class="bi bi-trash"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderAttendanceTable() {
+            const tbody = document.getElementById('attendanceTable');
+            tbody.innerHTML = '';
+            students.forEach((student, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="p-2">${index + 1000}</td>
+                    <td class="p-2">${student.name}</td>
+                    <td class="p-2">
+                        <input type="checkbox" class="attendance-checkbox" data-student-id="${index + 1000}">
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function saveAttendance() {
+            const date = document.getElementById('attendanceDate').value;
+            if (!date) {
+                alert('Please select a date');
+                return;
+            }
+
+            const checkboxes = document.querySelectorAll('.attendance-checkbox');
+            attendance[date] = {};
+            
+            checkboxes.forEach(checkbox => {
+                const studentId = checkbox.dataset.studentId;
+                attendance[date][studentId] = checkbox.checked;
+            });
+
+            alert('Attendance saved successfully!');
+        }
+
+        // Initialize the table
+        renderStudentTable();
+    </script>
+<script>document.body.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); return }, { passive: false })</script>
+	</body>
+</html>
